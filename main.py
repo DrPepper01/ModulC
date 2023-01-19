@@ -55,7 +55,7 @@ class Boad:
         self.size = size
         self.hid = hid
 
-        self.count = 0              # счетчик попыток
+        self.count = 0              # счетчик сбитых кораблей
         self.field = [["0"] * size for _ in range(size)]    # поля доски
         self.busy = []              # список занятых точек
         self.ships = []             #список кораблей
@@ -101,4 +101,74 @@ class Boad:
                     if verb:                                            # если показывать
                         self.field[cur.x][cur.y] = "."
                     self.busy.append(cur)                               # добавляем в занятые
+
+    def Shot(self, d):
+        if self.out(d):                     #выстрел по доске?
+            raise BoadOutExeption()
+
+        if d in self.busy:                  #Клетка занята?
+            raise BoadUseExeption
+
+        self.busy.append(d)
+
+        for ship in self.ships:             #обходим все корабли
+            if ship.shooten(d):             #Если попали в корабль
+                ship.lives -= 1
+                self.field[d.x][d.y] = "X"
+                if ship.lives == 0:
+                    self.count += 1
+                    self.contour(ship, True)
+                    print('Корабль уничтожен!')
+                    return False
+                else:
+                    print('Корабль ранен!')
+                    return True
+
+        self.field[d.x][d.y] = "."          # ставим точку
+        print('Мимо!')
+        return False
+
+    def begin(self):
+        self.busy = []
+
+class Player:
+    def __init__(self, boad: Boad, enemy: Boad):
+        self.boad = boad
+        self.enemy = enemy
+
+    def ask(self):
+        raise NotImplementedError()
+
+    def move(self):
+        while True:
+            try:
+                target = self.ask()
+                repeat = self.enemy.shot(target)
+                return repeat
+            except BoadExeption as e:
+                print(e)
+
+class AI(Player):
+    def ask(self):
+        d = Dot(random.randint(0, 5), random.randint(0, 5))
+        print("Ход компьютера: {d.x + 1} {d.y + 1}")
+        return d
+
+class User(Player):
+    def ask(self):
+        while True:
+            coords = input("Ваш ход: ")
+            if len(coords) != 2:
+                print('Введите координаты:')
+                continue
+
+            x, y = coords
+
+            if not (x.isdigit()) or not (y.isdigit):
+                print('Введите числа! ')
+                continue
+
+            x, y = int(x), int(y)
+
+            return Dot(x - 1, y - 1)
 

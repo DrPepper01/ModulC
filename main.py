@@ -1,4 +1,5 @@
-# Игра "Морской бой"
+import random
+
 class BoadExeption(Exception):
     pass
 
@@ -14,7 +15,7 @@ class BoadWrongShipExeption(BoadExeption):
     pass
 
 class Dot:
-    def __int__(self, x, y):
+    def __init__(self, x: int, y: int):
         self.x = x
         self.y = y
 
@@ -22,17 +23,17 @@ class Dot:
         return self.x == other.x and self.y == other.y
 
     def __repr__(self):
-        return f'Dot ( {self.x}, {self.y})'
+        return f'Dot ({self.x}, {self.y})'
 
 class Ship:
-    def __init__(self, l, d, o):
+    def __init__(self, l: int, d: Dot, o: int):
         self.l = l          # длина
         self.d = d          # точка начала
         self.o = o          # направление: 0 - горизонтально, 1 - вертикально
         self.lives  = l     # живучесть корабля
 
     @property
-    def dots(self):
+    def dots(self) -> list:
         ship_dots = []
         for i in range(self.l):
             cur_x = self.d.x
@@ -51,7 +52,7 @@ class Ship:
         return shot in self.dots
 
 class Boad:
-    def __init__(self, hid = False, size = 6):
+    def __init__(self, size = 6, hid = False):
         self.size = size
         self.hid = hid
 
@@ -81,7 +82,7 @@ class Boad:
             if self.out(d) or d in self.busy:
                 raise BoadWrongShipExeption
         for d in ship.dots:
-            self.field[d.x][d.y] = "*"
+            self.field[d.x][d.y] = "■"
             self.busy.append(d)
 
         self.ships.append(ship)
@@ -102,7 +103,7 @@ class Boad:
                         self.field[cur.x][cur.y] = "."
                     self.busy.append(cur)                               # добавляем в занятые
 
-    def Shot(self, d):
+    def shot(self, d):
         if self.out(d):                     #выстрел по доске?
             raise BoadOutExeption()
 
@@ -119,7 +120,7 @@ class Boad:
                     self.count += 1
                     self.contour(ship, True)
                     print('Корабль уничтожен!')
-                    return False
+                    return True
                 else:
                     print('Корабль ранен!')
                     return True
@@ -149,22 +150,22 @@ class Player:
                 print(e)
 
 class AI(Player):
-    def ask(self):
+    def ask(self) -> Dot:
         d = Dot(random.randint(0, 5), random.randint(0, 5))
-        print("Ход компьютера: {d.x + 1} {d.y + 1}")
+        print(f"Ход компьютера: {d.x + 1} {d.y + 1}")
         return d
 
 class User(Player):
-    def ask(self):
+    def ask(self) -> Dot:
         while True:
-            coords = input("Ваш ход: ")
+            coords = input("Ваш ход: ").split()
             if len(coords) != 2:
                 print('Введите координаты:')
                 continue
 
             x, y = coords
 
-            if not (x.isdigit()) or not (y.isdigit):
+            if not (x.isdigit()) or not (y.isdigit()):
                 print('Введите числа! ')
                 continue
 
@@ -172,3 +173,86 @@ class User(Player):
 
             return Dot(x - 1, y - 1)
 
+class Game:
+
+    def __init__(self, size=6):
+        self.size = size
+        pl = self.random_boad()
+        cm = self.random_boad()
+        cm.hid = True
+
+        self.ai = AI(cm, pl)
+        self.us = User(pl, cm)
+
+    # пытаемся создать доску
+    def try_boad(self) -> Boad:
+        len_ships = [3, 2, 2, 1, 1, 1 ,1]
+        boad = Boad(size = self.size)
+        attemps = 0
+        for l in len_ships:
+            while True:
+                attemps += 1
+                if attemps > 2000:
+                    return  None
+                ship = Ship(l, Dot(random.randint(0, self.size), random.randint(0, self.size)), random.randint(0,1))
+                try:
+                    boad.add_ship(ship)
+                    break
+                except BoadWrongShipExeption:
+                    pass
+        boad.begin()
+        return boad
+
+    def random_boad(self) -> Boad:
+        boad = None
+        while boad is None:
+            boad = self.try_boad()
+        return boad
+
+    def greet(self) -> None:
+        print('----------------------')
+        print('   Приветствуем вас   ')
+        print('  в игре морской бой  ')
+        print('----------------------')
+        print('   форма ввода: x,x'   )
+        print('   x - номер строки   ')
+        print('   y - номер столбца  ')
+        print('----------------------')
+
+    def loop(self) -> None:
+        num = 0
+        while True:
+            print('-' * 20)
+            print('Доска пользователя:')
+            print(self.us.boad)
+            print('Доска компьютера: ')
+            print(self.ai.boad)
+            print('-' * 20)
+            if num % 2 == 0:
+                print('Ходит пользователь:')
+                repeat = self.us.move()
+            else:
+                print('Ходит компьютер:')
+                repeat = self.ai.move()
+
+            if repeat:
+                num -= 1
+
+            if self.ai.boad.count == 7:
+                print('-' * 20)
+                print('Пользователь выиграл:')
+                break
+
+            if self.us.boad.count == 7:
+                print('-' * 20)
+                print('Компьютер выиграл:')
+                break
+
+            num += 1
+
+    def start(self):
+        self.greet()
+        self.loop()
+
+b = Game()
+b.start()
